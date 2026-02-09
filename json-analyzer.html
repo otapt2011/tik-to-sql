@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Analyzer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding-top: 60px; /* Fixed header offset */
+            padding-bottom: 40px; /* Fixed footer offset */
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            margin: 0 auto;
+            height: calc(100vh - 100px); /* Full height minus header+footer */
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Fixed Header */
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 12px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header h1 {
+            font-size: 1.4rem;
+            margin: 0;
+            white-space: nowrap;
+        }
+        
+        .header p {
+            display: none; /* Hide tagline on mobile */
+        }
+        
+        /* Fixed Footer */
+        .footer {
+            text-align: center;
+            padding: 10px 20px;
+            color: white;
+            font-size: 0.7rem;
+            background: rgba(0, 0, 0, 0.3);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        /* Compact Upload Section */
+        .upload-section {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f8fafc;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 25px 20px;
+            text-align: center;
+            background: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: #f0f9ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #4f46e5;
+            background: #e0e7ff;
+        }
+        
+        .upload-icon {
+            font-size: 36px;
+            color: #4f46e5;
+            margin-bottom: 10px;
+        }
+        
+        .upload-text {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .upload-note {
+            font-size: 0.7rem;
+            color: #9ca3af;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f3f4f6;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+        
+        .file-info i {
+            color: #4f46e5;
+            font-size: 18px;
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        /* Analysis Section */
+        .analysis-section {
+            display: none;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .section-header h2 {
+            color: #1f2937;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        /* Buttons */
+        button {
+            padding: 6px 12px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        
+        button:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+        
+        button.secondary {
+            background: #6b7280;
+        }
+        
+        button.secondary:hover {
+            background: #4b5563;
+        }
+        
+        button.success {
+            background: #10b981;
+        }
+        
+        button.success:hover {
+            background: #0da271;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 3px;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.7rem;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 3px;
+            background: #f3f4f6;
+            padding: 3px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            padding: 6px 10px;
+            background: transparent;
+            color: #6b7280;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        
+        .tab-btn:hover {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .tab-btn.active {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .tab-btn.active:hover {
+            background: #4338ca;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Output Areas */
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .output-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .output-area {
+            background: #1f2937;
+            color: #f3f4f6;
+            border-radius: 6px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .summary-area {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #334155;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* Message Tab Specific */
+        .messages-container {
+            height: 300px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+        
+        .message-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .message-title {
+            font-weight: 600;
+            color: #4f46e5;
+            font-size: 0.85rem;
+        }
+        
+        .message-content {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-x: auto;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        /* JSON Syntax Highlighting */
+        .json-key {
+            color: #60a5fa;
+        }
+        
+        .json-string {
+            color: #34d399;
+        }
+        
+        .json-number {
+            color: #fbbf24;
+        }
+        
+        .json-boolean {
+            color: #f87171;
+        }
+        
+        .json-null {
+            color: #9ca3af;
+        }
+        
+        .json-array {
+            color: #c084fc;
+        }
+        
+        .json-object {
+            color: #fb923c;
+        }
+        
+        .toggle {
+            cursor: pointer;
+            user-select: none;
+            margin-right: 3px;
+        }
+        
+        .collapsed > .json-children {
+            display: none;
+        }
+        
+        .collapsed:after {
+            content: '...';
+            color: #9ca3af;
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 50px;
+            right: 10px;
+            background: #10b981;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1001;
+            max-width: 300px;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 0;
+                height: calc(100vh - 100px);
+            }
+            
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            
+            .main-content {
+                padding: 10px;
+            }
+            
+            .upload-section {
+                padding: 15px;
+            }
+            
+            .upload-area {
+                padding: 20px 15px;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+            
+            .output-area, .summary-area {
+                height: 250px;
+                font-size: 11px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .tabs {
+                width: 100%;
+                overflow-x: auto;
+            }
+            
+            .tab-btn {
+                font-size: 0.7rem;
+                padding: 5px 8px;
+            }
+            
+            .output-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .message-content {
+                font-size: 10px;
+                max-height: 120px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1rem;
+            }
+            
+            .header-content {
+                gap: 10px;
+            }
+            
+            button {
+                padding: 5px 8px;
+                font-size: 0.7rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-card {
+                padding: 10px;
+            }
+            
+            .stat-value {
+                font-size: 1.3rem;
+            }
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Header -->
+    <div class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-code"></i> JSON Analyzer</h1>
+            <button id="newFileBtn" class="secondary" style="margin-left: auto;">
+                <i class="fas fa-file-upload"></i> New File
+            </button>
+        </div>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-upload"></i>
+                    </div>
+                    <div class="upload-text">
+                        Drag & drop JSON file or click to browse
+                    </div>
+                    <div class="upload-note">
+                        Supports large files • Intelligent sampling • SQL-ready output
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept=".json" hidden>
+                
+                <div id="fileInfo" class="file-info" style="display: none;">
+                    <i class="fas fa-file-code"></i>
+                    <div>
+                        <div id="fileName">No file selected</div>
+                        <div id="fileSize" class="upload-note"></div>
+                    </div>
+                </div>
+                
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.7rem;">
+                        <span id="progressStatus">Loading...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analysis Section -->
+            <div class="analysis-section" id="analysisSection">
+                <div class="section-header">
+                    <h2>JSON Analysis</h2>
+                    <div class="controls">
+                        <button id="newFileBtn2" class="secondary">
+                            <i class="fas fa-file-upload"></i> New
+                        </button>
+                    </div>
+                </div>
+                
+  
+                
+                <!-- Tabs Navigation -->
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="structure">
+                        <i class="fas fa-sitemap"></i> Structure
+                    </button>
+                    <button class="tab-btn" data-tab="sampled">
+                        <i class="fas fa-code"></i> Sample
+                    </button>
+                    <button class="tab-btn" data-tab="summary">
+                        <i class="fas fa-robot"></i> AI Summary
+                    </button>
+                    <button class="tab-btn" data-tab="messages">
+                        <i class="fas fa-comment-alt"></i> AI Messages
+                    </button>
+                </div>
+                
+                <!-- Tab Contents -->
+                <div class="tab-content active" id="structureTab">
+                    <div class="output-header">
+                        <h3 style="font-size: 0.9rem;">Structure View</h3>
+                        <div class="output-controls">
+                            <button id="expandAllBtn" class="secondary">
+                                <i class="fas fa-expand"></i> Expand
+                            </button>
+                            <button id="collapseAllBtn" class="secondary">
+                                <i class="fas fa-compress"></i> Collapse
+                            </button>
+                            <button id="copyStructureBtn" class="success">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="output-area" id="outputArea">
+                        <!-- Structure displayed here -->
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="sampledTab">
+                    <div class="output-header">
+                        <h3 style="font-size: 0.9rem;">Sampled JSON</h3>
+                        <div class="output-controls">
+                            <button id="copySampledBtn" class="success">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="output-area" id="sampledOutputArea">
+                        <!-- Sampled JSON displayed here -->
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="summaryTab">
+                    <div class="output-header">
+                        <h3 style="font-size: 0.9rem;">AI Request & Summary</h3>
+                        <div class="output-controls">
+                            <button id="copySummaryBtn" class="success">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="summary-area" id="summaryArea">
+                        <!-- AI Summary displayed here -->
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="messagesTab">
+                    <div class="output-header">
+                        <h3 style="font-size: 0.9rem;">AI Request Messages</h3>
+                        <div class="output-controls">
+                            <button id="copyAllMessagesBtn" class="success">
+                                <i class="fas fa-copy"></i> Copy All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="messages-container" id="messagesContainer">
+                        <!-- Message boxes will be added here by JavaScript -->
+                    </div>
+                </div>
+<div class="stats-grid" id="statsGrid">
+<!-- Stats populated by JS -->
+</div>
+
+</div>
+        </div>
+    </div>
+    
+    <!-- Fixed Footer -->
+    <div class="footer">
+        <p>JSON Analyzer v2.5 • SQL-ready • AI-assisted • Compact design</p>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Copied!</span>
+    </div>
+    
+    <script src="json-analyzer.js"></script>
+</body>
+</html>

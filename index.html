@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok to SQL</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100%;
+            padding-top: 50px; /* Fixed header offset */
+            padding-bottom: 30px; /* Fixed footer offset */
+            font-size: 12px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            margin: 0 auto;
+            height: calc(100% - 80px); /* Full height minus header+footer */
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Fixed Header */
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 8px 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .header h1 {
+            font-size: 1.1rem;
+            margin: 0;
+            white-space: nowrap;
+        }
+        
+        /* Fixed Footer */
+        .footer {
+            text-align: center;
+            padding: 8px 15px;
+            color: white;
+            font-size: 0.65rem;
+            background: rgba(0, 0, 0, 0.3);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            background: #f3f4f6;
+            padding: 2px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+        }
+        
+        .tab-btn {
+            padding: 5px 8px;
+            background: transparent;
+            color: #6b7280;
+            border: none;
+            border-radius: 3px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            min-width: 70px;
+            justify-content: center;
+        }
+        
+        .tab-btn:hover {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .tab-btn.active {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Upload Section */
+        .upload-section {
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f8fafc;
+            margin-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+            background: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: #f0f9ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #4f46e5;
+            background: #e0e7ff;
+        }
+        
+        .upload-icon {
+            font-size: 28px;
+            color: #4f46e5;
+            margin-bottom: 5px;
+        }
+        
+        .upload-text {
+            font-size: 0.75rem;
+            color: #4b5563;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        
+        .upload-note {
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            display: none;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.65rem;
+        }
+        
+        /* Controls */
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        button {
+            padding: 5px 10px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        
+        button:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        button.secondary {
+            background: #6b7280;
+        }
+        
+        button.success {
+            background: #10b981;
+        }
+        
+        button.danger {
+            background: #ef4444;
+        }
+        
+        button.info {
+            background: #3b82f6;
+        }
+        
+        /* Output Areas */
+        .output-area {
+            background: #1f2937;
+            color: #f3f4f6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            margin-bottom: 10px;
+        }
+        
+        /* JSON Syntax Highlighting */
+        .json-key {
+            color: #60a5fa;
+        }
+        
+        .json-string {
+            color: #34d399;
+        }
+        
+        .json-number {
+            color: #fbbf24;
+        }
+        
+        .json-boolean {
+            color: #f87171;
+        }
+        
+        .json-null {
+            color: #9ca3af;
+        }
+        
+        /* SQL Syntax Highlighting */
+        .sql-keyword {
+            color: #f472b6;
+            font-weight: bold;
+        }
+        
+        .sql-string {
+            color: #34d399;
+        }
+        
+        .sql-number {
+            color: #fbbf24;
+        }
+        
+        /* User Info */
+        .user-info {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .user-info h3 {
+            color: #4f46e5;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+        
+        .user-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+        }
+        
+        .user-field {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .field-label {
+            font-size: 0.65rem;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        
+        .field-value {
+            font-weight: 600;
+            color: #333;
+            word-break: break-word;
+            font-size: 0.8rem;
+        }
+        
+        /* Progress Container */
+        .progress-container {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .progress-details {
+            font-size: 0.65rem;
+            color: #888;
+            line-height: 1.3;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading-container {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            max-width: 300px;
+            width: 90%;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            right: 10px;
+            background: #10b981;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1002;
+            max-width: 250px;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        .toast.info {
+            background: #3b82f6;
+        }
+        
+        /* Configuration */
+        .config-panel {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+            margin-top: 10px;
+        }
+        
+        .config-item {
+            margin-bottom: 10px;
+        }
+        
+        .config-item label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 3px;
+            color: #555;
+            font-size: 0.75rem;
+        }
+        
+        .config-item input[type="range"] {
+            width: 100%;
+            height: 4px;
+        }
+        
+        .config-value {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: #666;
+            margin-top: 3px;
+        }
+        
+        /* Select elements */
+        select {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            background: white;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 2px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 2px;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                font-size: 11px;
+            }
+            
+            .container {
+                border-radius: 0;
+                height: calc(100% - 80px);
+            }
+            
+            .header h1 {
+                font-size: 1rem;
+            }
+            
+            .main-content {
+                padding: 8px;
+            }
+            
+            .upload-section {
+                padding: 10px;
+            }
+            
+            .upload-area {
+                padding: 12px;
+            }
+            
+            .output-area {
+                height: 200px;
+                font-size: 10px;
+            }
+            
+            .tab-btn {
+                font-size: 0.65rem;
+                padding: 4px 6px;
+                min-width: 60px;
+            }
+            
+            button {
+                font-size: 0.65rem;
+                padding: 4px 8px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 0.9rem;
+            }
+            
+            .controls-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .controls-row button {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .tab-btn {
+                min-width: 50px;
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Body with overflow hidden */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100%;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    overflow: hidden; /* Prevent scrolling on body */
+}
+
+/* Fixed Header - set height explicitly */
+.header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    padding: 8px 15px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px; /* Explicit header height */
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Fixed Footer - set height explicitly */
+.footer {
+    text-align: center;
+    padding: 8px 15px;
+    color: white;
+    font-size: 0.65rem;
+    background: rgba(0, 0, 0, 0.3);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px; /* Explicit footer height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Container with calculated height */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    background: white;
+    margin: 0 auto;
+    /* Calculate height: 100% minus header and footer heights */
+    height: calc(100% - 50px - 30px); /* 100% - header - footer */
+    position: fixed;
+    top: 50px; /* Position below header */
+    left: 0;
+    right: 0;
+    bottom: 30px; /* Position above footer */
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* Container handles scrolling */
+}
+
+/* Main content area with scrolling */
+.main-content {
+    flex: 1;
+    overflow-y: auto; /* Scroll only inside container */
+    padding: 10px;
+    height: 100%; /* Take full height of container */
+}
+
+/* Alternative: Using CSS variables for flexibility */
+:root {
+    --header-height: 50px;
+    --footer-height: 30px;
+}
+
+/* You can also use variables like this:
+.container {
+    height: calc(100% - var(--header-height) - var(--footer-height));
+    top: var(--header-height);
+    bottom: var(--footer-height);
+}
+*/
+
+/* Rest of your CSS styles... */
+.tabs {
+    display: flex;
+    gap: 2px;
+    background: #f3f4f6;
+    padding: 2px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    padding: 5px 8px;
+    background: transparent;
+    color: #6b7280;
+    border: none;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    min-width: 70px;
+    justify-content: center;
+}
+
+.tab-btn:hover {
+    background: #e5e7eb;
+    color: #4b5563;
+}
+
+.tab-btn.active {
+    background: #4f46e5;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.upload-section {
+    padding: 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f8fafc;
+    margin-bottom: 10px;
+}
+
+/* Ensure output areas don't overflow container */
+.output-area {
+    background: #1f2937;
+    color: #f3f4f6;
+    border-radius: 4px;
+    padding: 10px;
+    height: 250px;
+    overflow-y: auto; /* Scroll inside output area */
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    margin-bottom: 10px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    body {
+        font-size: 11px;
+    }
+    
+    .header {
+        height: 45px; /* Adjust header for mobile */
+        padding: 6px 12px;
+    }
+    
+    .footer {
+        height: 25px; /* Adjust footer for mobile */
+        padding: 6px 12px;
+    }
+    
+    .container {
+        height: calc(100% - 45px - 25px); /* Adjusted for mobile */
+        top: 45px;
+        bottom: 25px;
+    }
+    
+    .main-content {
+        padding: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        height: 40px;
+    }
+    
+    .footer {
+        height: 20px;
+        font-size: 0.6rem;
+    }
+    
+    .container {
+        height: calc(100% - 40px - 20px);
+        top: 40px;
+        bottom: 20px;
+    }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+</style>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        /* Body with overflow hidden */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100%;
+            padding: 0;
+            margin: 0;
+            font-size: 12px;
+            overflow: hidden; /* Prevent scrolling on body */
+        }
+        
+        /* Fixed Header */
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 8px 15px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px; /* Explicit header height */
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .header h1 {
+            font-size: 1.1rem;
+            margin: 0;
+            white-space: nowrap;
+        }
+        
+        /* Fixed Footer */
+        .footer {
+            text-align: center;
+            padding: 8px 15px;
+            color: white;
+            font-size: 0.65rem;
+            background: rgba(0, 0, 0, 0.3);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px; /* Explicit footer height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        /* Container with calculated height */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            margin: 0 auto;
+            /* Calculate height: 100% minus header and footer heights */
+            height: calc(100% - 50px - 30px); /* 100% - header - footer */
+            position: fixed;
+            top: 50px; /* Position below header */
+            left: 0;
+            right: 0;
+            bottom: 30px; /* Position above footer */
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden; /* Container handles scrolling */
+        }
+        
+        /* Main content area - FLEX CONTAINER */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column; /* Vertical layout */
+            padding: 10px;
+            overflow: hidden; /* Prevent main content from scrolling */
+            height: 100%; /* Take full height of container */
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            background: #f3f4f6;
+            padding: 2px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+            flex-shrink: 0; /* Prevent tabs from shrinking */
+        }
+        
+        .tab-btn {
+            padding: 5px 8px;
+            background: transparent;
+            color: #6b7280;
+            border: none;
+            border-radius: 3px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            min-width: 70px;
+            justify-content: center;
+        }
+        
+        .tab-btn:hover {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .tab-btn.active {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        /* Tab content - FLEX ITEM that takes remaining space */
+        .tab-content {
+            display: none;
+            flex: 1; /* Take all remaining space */
+            overflow-y: auto; /* Scroll inside tab content */
+            min-height: 0; /* Important for flex children with overflow */
+        }
+        
+        .tab-content.active {
+            display: flex;
+            flex-direction: column; /* Make it a flex container too */
+        }
+        
+        /* Upload Section */
+        .upload-section {
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f8fafc;
+            margin-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+            background: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: #f0f9ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #4f46e5;
+            background: #e0e7ff;
+        }
+        
+        .upload-icon {
+            font-size: 28px;
+            color: #4f46e5;
+            margin-bottom: 5px;
+        }
+        
+        .upload-text {
+            font-size: 0.75rem;
+            color: #4b5563;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        
+        .upload-note {
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            display: none;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.65rem;
+        }
+        
+        /* Controls */
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        button {
+            padding: 5px 10px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        
+        button:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        button.secondary {
+            background: #6b7280;
+        }
+        
+        button.success {
+            background: #10b981;
+        }
+        
+        button.danger {
+            background: #ef4444;
+        }
+        
+        button.info {
+            background: #3b82f6;
+        }
+        
+        /* Output Areas - Scroll inside tab content */
+        .output-area {
+            background: #1f2937;
+            color: #f3f4f6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 100%; /* Fill parent container */
+            overflow-y: auto; /* Scroll inside output area */
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            flex: 1; /* Take remaining space in tab-content */
+            min-height: 0; /* Important for flex overflow */
+        }
+        
+        /* JSON Syntax Highlighting */
+        .json-key {
+            color: #60a5fa;
+        }
+        
+        .json-string {
+            color: #34d399;
+        }
+        
+        .json-number {
+            color: #fbbf24;
+        }
+        
+        .json-boolean {
+            color: #f87171;
+        }
+        
+        .json-null {
+            color: #9ca3af;
+        }
+        
+        /* SQL Syntax Highlighting */
+        .sql-keyword {
+            color: #f472b6;
+            font-weight: bold;
+        }
+        
+        .sql-string {
+            color: #34d399;
+        }
+        
+        .sql-number {
+            color: #fbbf24;
+        }
+        
+        /* User Info */
+        .user-info {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .user-info h3 {
+            color: #4f46e5;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+        
+        .user-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+        }
+        
+        .user-field {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .field-label {
+            font-size: 0.65rem;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        
+        .field-value {
+            font-weight: 600;
+            color: #333;
+            word-break: break-word;
+            font-size: 0.8rem;
+        }
+        
+        /* Progress Container */
+        .progress-container {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .progress-details {
+            font-size: 0.65rem;
+            color: #888;
+            line-height: 1.3;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading-container {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            max-width: 300px;
+            width: 90%;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            right: 10px;
+            background: #10b981;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1002;
+            max-width: 250px;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        .toast.info {
+            background: #3b82f6;
+        }
+        
+        /* Configuration */
+        .config-panel {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+            margin-top: 10px;
+        }
+        
+        .config-item {
+            margin-bottom: 10px;
+        }
+        
+        .config-item label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 3px;
+            color: #555;
+            font-size: 0.75rem;
+        }
+        
+        .config-item input[type="range"] {
+            width: 100%;
+            height: 4px;
+        }
+        
+        .config-value {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: #666;
+            margin-top: 3px;
+        }
+        
+        /* Select elements */
+        select {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            background: white;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        /* Statistics content area - scrollable */
+        .stats-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        /* For tab content with multiple sections */
+        .tab-section {
+            margin-bottom: 10px;
+            flex-shrink: 0; /* Prevent sections from shrinking */
+        }
+        
+        .tab-section:last-child {
+            margin-bottom: 0;
+            flex: 1; /* Last section takes remaining space */
+            min-height: 0; /* Important for overflow */
+            overflow-y: auto; /* Scroll inside last section */
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                font-size: 11px;
+            }
+            
+            .container {
+                border-radius: 0;
+                height: calc(100% - 45px - 25px);
+                top: 45px;
+                bottom: 25px;
+            }
+            
+            .header {
+                height: 45px;
+                padding: 6px 12px;
+            }
+            
+            .footer {
+                height: 25px;
+                padding: 6px 12px;
+            }
+            
+            .header h1 {
+                font-size: 1rem;
+            }
+            
+            .main-content {
+                padding: 8px;
+            }
+            
+            .upload-section {
+                padding: 10px;
+            }
+            
+            .upload-area {
+                padding: 12px;
+            }
+            
+            .output-area {
+                font-size: 10px;
+            }
+            
+            .tab-btn {
+                font-size: 0.65rem;
+                padding: 4px 6px;
+                min-width: 60px;
+            }
+            
+            button {
+                font-size: 0.65rem;
+                padding: 4px 8px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header {
+                height: 40px;
+            }
+            
+            .footer {
+                height: 20px;
+                font-size: 0.6rem;
+            }
+            
+            .container {
+                height: calc(100% - 40px - 20px);
+                top: 40px;
+                bottom: 20px;
+            }
+            
+            .controls-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .controls-row button {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .tab-btn {
+                min-width: 50px;
+                font-size: 0.6rem;
+            }
+        }
+    </style>
+
+</head>
+<body>
+    <!-- Fixed Header -->
+    <div class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-database"></i> TikTok to SQL</h1>
+            <button id="newFileBtn" class="secondary" style="margin-left: auto;">
+                <i class="fas fa-file-upload"></i> New
+            </button>
+        </div>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Tabs Navigation -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="upload">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+                <button class="tab-btn" data-tab="extract">
+                    <i class="fas fa-cogs"></i> Extract
+                </button>
+                <button class="tab-btn" data-tab="results">
+                    <i class="fas fa-chart-bar"></i> Results
+                </button>
+                <button class="tab-btn" data-tab="sql">
+                    <i class="fas fa-code"></i> SQL
+                </button>
+                <button class="tab-btn" data-tab="data">
+                    <i class="fas fa-table"></i> Data
+                </button>
+                <button class="tab-btn" data-tab="settings">
+                    <i class="fas fa-sliders-h"></i> Settings
+                </button>
+            </div>
+            
+            <!-- Upload Tab -->
+<div class="tab-content active" id="uploadTab">
+<div class="upload-section">
+<div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i class="fas fa-file-upload"></i>
+                        </div>
+                        <div class="upload-text">
+                            Drag & drop TikTok JSON file
+                        </div>
+                        <div class="upload-note">
+                            Supports large files • Optimized for TikTok exports
+                        </div>
+                    </div>
+<input type="file" id="fileInput" accept=".json" hidden>
+                    
+<div class="controls-row" style="margin-top: 10px;">
+<button class="btn" id="browseBtn">
+<i class="fas fa-folder-open"></i> Browse Files
+</button>
+</div>
+                    
+                    <div id="fileInfo" class="file-info">
+                        <i class="fas fa-file-code"></i>
+                        <div>
+                            <div id="fileName">No file selected</div>
+                            <div id="fileSize" class="upload-note"></div>
+                            <div id="fileStructure" style="font-size:0.65rem;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Extract Tab -->
+            <div class="tab-content" id="extractTab">
+<div class="upload-section">
+<div class="controls-row">
+<button class="btn success" id="extractBtn" disabled>
+                            <i class="fas fa-play"></i> Start Extraction
+                        </button>
+                        <button class="btn danger" id="abortBtn" style="display: none;">
+                            <i class="fas fa-stop"></i> Stop
+                        </button>
+                        <button class="btn secondary" id="resetBtn">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                    
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-text">
+                            <span id="progressStatus">Starting...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <div class="progress-details">
+                            <div id="progressDetails">Processing: 0 items</div>
+                            <div id="progressTable">Table: -</div>
+                            <div id="progressSpeed" style="margin-top: 3px; font-size: 0.6rem;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Tab -->
+<div class="tab-content" id="resultsTab">
+
+<div class="user-info" id="userInfo">
+<h3>User Profile</h3>
+<div class="user-details" id="userDetails"></div>
+</div>
+
+<div class="controls-row" style="margin-top: 10px;">
+<button class="btn success" id="downloadSqlBtn" disabled>
+<i class="fas fa-download"></i> Download SQL
+</button>
+<button class="btn info" id="downloadJsonBtn" disabled>
+<i class="fas fa-download"></i> Download JSON
+</button>
+<button class="btn secondary" id="previewSqlBtn" disabled>
+<i class="fas fa-eye"></i> Preview SQL
+</button>
+</div>
+
+
+<div style="margin-top: 20px; padding: 15px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
+    <h4 style="color: #0369a1; margin-bottom: 10px; font-size: 0.8rem;">
+        <i class="fas fa-download"></i> Quick Export
+    </h4>
+    
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button onclick="downloadSimpleSQL()" style="background: #4f46e5; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+            <i class="fas fa-file-code"></i> SQL
+        </button>
+        
+        <button onclick="downloadSimpleJSON()" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+            <i class="fas fa-file-export"></i> JSON
+        </button>
+        
+        <button onclick="downloadSimpleBoth()" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+            <i class="fas fa-download"></i> Both
+        </button>
+    </div>
+    
+    <p style="font-size: 0.65rem; color: #475569; margin-top: 8px;">
+        Export extracted data as files. No external dependencies.
+    </p>
+</div>
+
+<div class="stats-grid" id="statsGrid">
+<!-- Stats populated by JS -->
+</div>
+                
+<div class="config-panel">
+<h4 style="color: #4f46e5; margin-bottom: 8px; font-size: 0.8rem;">Statistics</h4>
+                    <div id="statisticsContent" style="min-height: 100px;">
+                        <p style="font-size:0.75rem; color:#666; padding:5px;">Extract data to see statistics</p>
+                    </div>
+                </div>
+
+
+</div>
+            
+            <!-- SQL Tab -->
+            <div class="tab-content" id="sqlTab">
+                <div class="controls-row">
+                    <button class="btn success" id="copySqlBtn" disabled>
+                        <i class="fas fa-copy"></i> Copy SQL
+                    </button>
+                    <select id="sqlViewSelect">
+                        <option value="full">Full SQL</option>
+                        <option value="schema">Schema Only</option>
+                        <option value="data">Data Only</option>
+                    </select>
+                </div>
+                <div class="output-area" id="sqlOutput">
+                    <!-- SQL displayed here -->
+                </div>
+                <div style="text-align: center; font-size: 0.7rem; color: #666;">
+                    <span id="sqlCount">0 SQL statements</span>
+                </div>
+            </div>
+            
+            <!-- Data Tab -->
+            <div class="tab-content" id="dataTab">
+                <div class="controls-row">
+                    <select id="dataTableSelect" style="flex: 2;">
+                        <option value="">Select table...</option>
+                    </select>
+                    <button class="btn secondary" style="flex: 1;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="output-area" id="dataOutput">
+                    <!-- Data displayed here -->
+                </div>
+                <div style="text-align: center; font-size: 0.7rem; color: #666;">
+                    <span id="dataCount">No data selected</span>
+                </div>
+            </div>
+
+
+
+            <!-- Settings Tab -->
+<div class="tab-content" id="settingsTab">
+                <div class="config-panel">
+                    <h4 style="color: #4f46e5; margin-bottom: 8px; font-size: 0.8rem;">Processing Settings</h4>
+                    <div class="config-item">
+                        <label for="chunkSize">Chunk Size</label>
+                        <input type="range" id="chunkSize" min="100" max="5000" step="100" value="1000">
+                        <div class="config-value">
+                            <span>Smaller</span>
+                            <span id="chunkSizeValue">1000</span>
+                            <span>Larger</span>
+                        </div>
+                    </div>
+                    <div class="config-item">
+                        <label for="batchSize">Batch Size</label>
+                        <input type="range" id="batchSize" min="10" max="500" step="10" value="100">
+                        <div class="config-value">
+                            <span>Smaller</span>
+                            <span id="batchSizeValue">100</span>
+                            <span>Larger</span>
+                        </div>
+                    </div>
+                    <button class="btn success" id="saveSettingsBtn" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+                
+                <div class="config-panel" style="margin-top: 10px;">
+                    <h4 style="color: #4f46e5; margin-bottom: 8px; font-size: 0.8rem;">About</h4>
+                    <p style="font-size: 0.7rem; color: #666; line-height: 1.4;">
+                        TikTok JSON to SQLite converter. Optimized for large TikTok data exports.
+                        Works with any size file following TikTok's JSON structure.
+                    </p>
+                </div>
+            </div>
+
+</div>
+    </div>
+    
+    <!-- Fixed Footer -->
+    <div class="footer">
+        <p>TikTok to SQL • Mobile Optimized • Large File Support</p>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <h3 id="loadingTitle">Processing TikTok Data</h3>
+            <p id="loadingMessage">Reading JSON file...</p>
+            <div class="progress-bar" style="margin: 10px 0;">
+                <div class="progress-fill" id="loadingProgressFill"></div>
+            </div>
+            <p id="loadingDetails" style="font-size: 0.7rem; color: #666;"></p>
+            <button class="btn danger" id="cancelBtn" style="margin-top: 10px;">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Copied!</span>
+    </div>
+
+
+<script src="tiktok-mapper.js"></script>
+<script src="tiktok-extractor.js"></script>
+<script src="tiktok-to-sql.js"></script>
+
+
+</body>
+</html>
